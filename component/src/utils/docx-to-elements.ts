@@ -1537,7 +1537,7 @@ export async function docxToElements(arrayBuffer: ArrayBuffer): Promise<EditorEl
   if (!bodyEl) {
     throw new Error('Invalid DOCX: missing w:body');
   }
-
+  
   // 6. Process the body
   const raw = processBody(bodyEl, docDefaults, paraDefaults, defaultParaStyleId, styles, numbering, rels, images);
 

@@ -1,10 +1,10 @@
-import React, { useRef, useState } from "react";
-import { IconButton, Input, Tooltip, CircularProgress } from "@mui/material";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
-import { DOMEventHandlers } from "@mindfiredigital/canvas-editor";
-import { htmlToElements } from "../../utils/html-to-elements";
-import { docxToElements } from "../../utils/docx-to-elements";
-import JSZip from "jszip";
+import React, { useRef, useState } from 'react';
+import { IconButton, Input, Tooltip, CircularProgress } from '@mui/material';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import { DOMEventHandlers } from '@mindfiredigital/canvas-editor';
+import { htmlToElements } from '../../utils/html-to-elements';
+import { docxToElements } from '../../utils/docx-to-elements';
+import JSZip from 'jszip';
 
 interface DocxImportButtonProps {
   style?: React.CSSProperties;
@@ -24,43 +24,51 @@ const DocxImportButton: React.FC<DocxImportButtonProps> = (_props) => {
   const logRawDocx = async (file: File) => {
     try {
       const arrayBuffer = await file.arrayBuffer();
-      console.log("[DocxImport] Raw ArrayBuffer byteLength:", arrayBuffer.byteLength);
+      console.log(
+        '[DocxImport] Raw ArrayBuffer byteLength:',
+        arrayBuffer.byteLength,
+      );
       const preview = Array.from(new Uint8Array(arrayBuffer).slice(0, 64));
-      console.log("[DocxImport] Raw bytes preview (first 64):", preview);
+      console.log('[DocxImport] Raw bytes preview (first 64):', preview);
       try {
         const zip = await JSZip.loadAsync(arrayBuffer);
         const entries = Object.keys(zip.files);
-        console.log("[DocxImport] ZIP entries:", entries);
+        console.log('[DocxImport] ZIP entries:', entries);
 
-        const docXml = await zip.file("word/document.xml")?.async("text");
+        const docXml = await zip.file('word/document.xml')?.async('text');
         if (docXml) {
-          console.log("[DocxImport] word/document.xml (first 2000 chars):");
+          console.log('[DocxImport] word/document.xml (first 2000 chars):');
           console.log(docXml.slice(0, 2000));
         }
 
-        const numberingXml = await zip.file("word/numbering.xml")?.async("text");
+        const numberingXml = await zip
+          .file('word/numbering.xml')
+          ?.async('text');
         if (numberingXml) {
-          console.log("[DocxImport] word/numbering.xml (first 2000 chars):");
+          console.log('[DocxImport] word/numbering.xml (first 2000 chars):');
           console.log(numberingXml.slice(0, 2000));
         }
 
-        const stylesXml = await zip.file("word/styles.xml")?.async("text");
+        const stylesXml = await zip.file('word/styles.xml')?.async('text');
         if (stylesXml) {
-          console.log("[DocxImport] word/styles.xml (first 2000 chars):");
+          console.log('[DocxImport] word/styles.xml (first 2000 chars):');
           console.log(stylesXml.slice(0, 2000));
         }
       } catch (zipErr) {
-        console.warn("[DocxImport] Failed to unzip DOCX for readable XML:", zipErr);
+        console.warn(
+          '[DocxImport] Failed to unzip DOCX for readable XML:',
+          zipErr,
+        );
       }
       return arrayBuffer;
     } catch (err) {
-      console.warn("[DocxImport] Failed to read raw ArrayBuffer:", err);
+      console.warn('[DocxImport] Failed to read raw ArrayBuffer:', err);
       return null;
     }
   };
 
   const handleFileInputChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -69,10 +77,10 @@ const DocxImportButton: React.FC<DocxImportButtonProps> = (_props) => {
 
     // Validate file type
     const validTypes = [
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
-    if (!validTypes.includes(file.type) && !file.name.endsWith(".docx")) {
-      alert("Please upload a .docx file.");
+    if (!validTypes.includes(file.type) && !file.name.endsWith('.docx')) {
+      alert('Please upload a .docx file.');
       return;
     }
 
@@ -85,59 +93,94 @@ const DocxImportButton: React.FC<DocxImportButtonProps> = (_props) => {
       if (_props.onClientImport) {
         // Client-side import path — parse DOCX directly in the browser
         elements = await _props.onClientImport(file);
-        console.log("[DocxImport] Client-side parsed", elements.length, "elements");
+        console.log(
+          '[DocxImport] Client-side parsed',
+          elements.length,
+          'elements',
+        );
       } else if (_props.apiBaseUrl) {
         // Legacy fallback: upload to backend for LibreOffice conversion
-        const baseUrl = _props.apiBaseUrl || "";
+        const baseUrl = _props.apiBaseUrl || '';
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append('file', file);
 
         const response = await fetch(`${baseUrl}/api/v1/import/docx`, {
-          method: "POST",
+          method: 'POST',
           body: formData,
-          credentials: "include",
+          credentials: 'include',
         });
 
         if (!response.ok) {
           if (response.status === 404) {
             console.warn(
-              "[DocxImport] Server endpoint not found (404). Falling back to client-side import."
+              '[DocxImport] Server endpoint not found (404). Falling back to client-side import.',
             );
             const arrayBuffer = rawBuffer ?? (await file.arrayBuffer());
             elements = await docxToElements(arrayBuffer);
             console.log(
-              "[DocxImport] Client-side fallback parsed",
+              '[DocxImport] Client-side fallback parsed',
               elements.length,
-              "elements"
+              'elements',
             );
           } else {
             const errorData = await response.json().catch(() => null);
             throw new Error(
-              errorData?.error?.message || `Server error: ${response.status}`
+              errorData?.error?.message || `Server error: ${response.status}`,
             );
           }
         } else {
           const result = await response.json();
           const html: string = result.data.html;
           elements = htmlToElements(html);
-          console.log("[DocxImport] Server-side parsed", elements.length, "elements from HTML");
+          console.log(
+            '[DocxImport] Server-side parsed',
+            elements.length,
+            'elements from HTML',
+          );
         }
       } else {
         // Default client-side import when no backend is configured
         const arrayBuffer = rawBuffer ?? (await file.arrayBuffer());
         elements = await docxToElements(arrayBuffer);
-        console.log("[DocxImport] Client-side default parsed", elements.length, "elements");
+        console.log(
+          '[DocxImport] Client-side default parsed',
+          elements.length,
+          'elements',
+        );
       }
 
       if (elements.length > 0) {
-        console.log("[DocxImport] Full IElement[] data:", JSON.stringify(elements, null, 2));
-        console.log("[DocxImport] Raw elements object (expandable):", elements);
+        console.log(
+          '[DocxImport] Full IElement[] data:',
+          JSON.stringify(elements, null, 2),
+        );
+        console.log('[DocxImport] Raw elements object (expandable):', elements);
         // Deep clone to prevent internal computeRowList from mutating our objects
         const cloned =
-          typeof structuredClone === "function"
+          typeof structuredClone === 'function'
             ? structuredClone(elements)
             : JSON.parse(JSON.stringify(elements));
         DOMEventHandlers.setContent({ main: cloned });
+        console.log('elements loaded into editorrrrr', cloned);
+
+        // Copy-friendly clone data logs
+        const clonedJson = JSON.stringify(cloned, null, 2);
+        console.log(
+          '[DocxImport] Cloned data (pretty JSON — copy from below):',
+        );
+        console.log(clonedJson);
+        console.log(
+          '[DocxImport] Cloned data (single-line JSON — easiest copy):',
+        );
+        console.log(JSON.stringify(cloned));
+        try {
+          (window as any).__clonedDocxData = cloned;
+          console.log(
+            '[DocxImport] Stashed on window.__clonedDocxData — run `copy(window.__clonedDocxData)` in DevTools to copy full object to clipboard.',
+          );
+        } catch {
+          /* noop */
+        }
 
         // Force non-lazy render for overflow:auto containers.
         // Use requestAnimationFrame to ensure setContent's internal render
@@ -147,22 +190,29 @@ const DocxImportButton: React.FC<DocxImportButtonProps> = (_props) => {
             const instance = (DOMEventHandlers as any).getEditorInstance();
             const draw = instance?.command?.draw;
             if (draw) {
-              draw.render({ isSetCursor: false, isCompute: true, isLazy: false, isSubmitHistory: false });
+              draw.render({
+                isSetCursor: false,
+                isCompute: true,
+                isLazy: false,
+                isSubmitHistory: false,
+              });
             }
-          } catch { /* editor not ready */ }
+          } catch {
+            /* editor not ready */
+          }
         });
       }
     } catch (error) {
-      console.error("[DocxImport] Failed to import DOCX:", error);
+      console.error('[DocxImport] Failed to import DOCX:', error);
       alert(
         error instanceof Error
           ? `Import failed: ${error.message}`
-          : "Failed to import the DOCX file. Please try again."
+          : 'Failed to import the DOCX file. Please try again.',
       );
     } finally {
       setLoading(false);
       if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+        fileInputRef.current.value = '';
       }
     }
   };
@@ -178,10 +228,10 @@ const DocxImportButton: React.FC<DocxImportButtonProps> = (_props) => {
       <Input
         type="file"
         inputRef={fileInputRef}
-        style={{ display: "none" }}
+        style={{ display: 'none' }}
         inputProps={{
           accept:
-            ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         }}
         onChange={handleFileInputChange}
       />
@@ -195,7 +245,7 @@ const DocxImportButton: React.FC<DocxImportButtonProps> = (_props) => {
           {loading ? (
             <CircularProgress size={18} />
           ) : (
-            <UploadFileIcon style={{ fontSize: "large" }} />
+            <UploadFileIcon style={{ fontSize: 'large' }} />
           )}
         </Tooltip>
       </IconButton>

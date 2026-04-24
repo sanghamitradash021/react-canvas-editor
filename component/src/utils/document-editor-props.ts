@@ -5,6 +5,7 @@ export const toolbarItem: any = {
   undo: true,
   redo: true,
   image: true,
+  lineSpacing: true,
 };
 
 export const toolbarClass: any = {
@@ -55,6 +56,9 @@ export const toolbarClass: any = {
       // background:'green'
     },
     heading: {
+      // background:'green'
+    },
+    lineSpacing: {
       // background:'green'
     },
     selectedToolbarItemColor: {

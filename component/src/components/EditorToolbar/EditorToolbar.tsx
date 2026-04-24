@@ -34,6 +34,8 @@ import HeadingButton from "../HeadingButton/HeadingButton";
 import InsertLinkIcon from "@mui/icons-material/InsertLink";
 import ImageUploadButton from "../ImageUploadButton/ImageUploadButton";
 import DocxImportButton from "../DocxImportButton/DocxImportButton";
+import LineSpacingButton from "../LineSpacingButton/LineSpacingButton";
+import ParagraphSpacingButton from "../ParagraphSpacingButton/ParagraphSpacingButton";
 import Divider from "@mui/material/Divider";
 
 interface content {
@@ -71,18 +73,31 @@ const EditorToolbar = forwardRef<HTMLDivElement, content>(function Toolbar(
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
+    let attached = false;
+
+    const tryAttach = () => {
+      try {
+        const editor: any = (DOMEventHandlers as any).getEditorInstance?.();
+        if (!editor?.listener) return false;
+        editor.listener.rangeStyleChange = (payload: IRangeStyle) => {
+          setContentStyles(payload);
+        };
+        return true;
+      } catch {
+        return false;
+      }
+    };
 
     const timeout = setTimeout(() => {
       interval = setInterval(() => {
-        const editorDom = document.querySelector('.canvas-editor');       
-        if (!editorDom) {
-            return; 
+        const editorDom = document.querySelector('.canvas-editor');
+        if (!editorDom) return;
+        if (!attached) {
+          attached = tryAttach();
         }
         try {
           const data = DOMEventHandlers.getContentStyles();
-          if (data) {
-             setContentStyles(data);
-          }
+          if (data) setContentStyles(data);
         } catch (e) {}
       }, 100);
     }, 1000);
@@ -90,11 +105,19 @@ const EditorToolbar = forwardRef<HTMLDivElement, content>(function Toolbar(
     return () => {
       clearInterval(interval);
       clearTimeout(timeout);
+      try {
+        const editor: any = (DOMEventHandlers as any).getEditorInstance?.();
+        if (editor?.listener) editor.listener.rangeStyleChange = null;
+      } catch {}
     };
 }, []);
 
   return (
-    <AppBar position='sticky' className="ce-editor-toolbar" sx={{ top: 0, zIndex: 10, ..._props?.toolbarClass?.container }}>
+    <AppBar position='sticky' className="ce-editor-toolbar" {...({ 'editor-component': 'toolbar' } as any)} onMouseDown={(e) => {
+      const t = e.target as HTMLElement
+      if (t && t.closest('input, textarea, [contenteditable="true"]')) return
+      e.preventDefault()
+    }} sx={{ top: 0, zIndex: 10, ..._props?.toolbarClass?.container }}>
         <Stack sx={_props?.toolbarClass?.primaryToolbar}>
           {(!_props?.toolbar || _props?.toolbar?.undo) && (
             <ButtonWrapper
@@ -122,14 +145,13 @@ const EditorToolbar = forwardRef<HTMLDivElement, content>(function Toolbar(
           {(!_props?.toolbar || _props?.toolbar?.bold) && (
             <ButtonWrapper
               sx={
-                formats.indexOf("Bold") > -1
+                contentStyles?.bold
                   ? { ..._props?.toolbarClass?.item?.bold, ...selectedItemStyle }
                   : _props?.toolbarClass?.item?.bold
               }
               title='Bold'
               handleClick={() => {
                 DOMEventHandlers.handleBold();
-                addFormat("Bold");
               }}>
               <FormatBoldIcon style={{ fontSize: "large" }} />
             </ButtonWrapper>
@@ -137,14 +159,13 @@ const EditorToolbar = forwardRef<HTMLDivElement, content>(function Toolbar(
           {(!_props?.toolbar || _props?.toolbar?.italic) && (
             <ButtonWrapper
               sx={
-                formats.indexOf("Italic") > -1
+                contentStyles?.italic
                   ? { ..._props?.toolbarClass?.item?.italic, ...selectedItemStyle }
                   : _props?.toolbarClass?.item?.italic
               }
               title='Italic'
               handleClick={() => {
                 DOMEventHandlers.handleItalic();
-                addFormat("Italic");
               }}>
               <FormatItalicIcon style={{ fontSize: "large" }} />
             </ButtonWrapper>
@@ -152,14 +173,13 @@ const EditorToolbar = forwardRef<HTMLDivElement, content>(function Toolbar(
           {(!_props?.toolbar || _props?.toolbar?.underline) && (
             <ButtonWrapper
               sx={
-                formats.indexOf("Underline") > -1
+                contentStyles?.underline
                   ? { ..._props?.toolbarClass?.item?.underline, ...selectedItemStyle }
                   : _props?.toolbarClass?.item?.underline
               }
               title='Underline'
               handleClick={() => {
                 DOMEventHandlers.handleUnderline();
-                addFormat("Underline");
               }}>
               <FormatUnderlinedIcon style={{ fontSize: "large" }} />
             </ButtonWrapper>
@@ -189,7 +209,11 @@ const EditorToolbar = forwardRef<HTMLDivElement, content>(function Toolbar(
           )}
           {(!_props?.toolbar || _props?.toolbar?.strikethrough) && (
             <ButtonWrapper
-              sx={_props?.toolbarClass?.item?.strikethrough}
+              sx={
+                contentStyles?.strikeout
+                  ? { ..._props?.toolbarClass?.item?.strikethrough, ...selectedItemStyle }
+                  : _props?.toolbarClass?.item?.strikethrough
+              }
               title='Strikethrough'
               handleClick={DOMEventHandlers.handleStrikeout}>
               <StrikethroughSIcon style={{ fontSize: "large" }} />
@@ -371,6 +395,25 @@ const EditorToolbar = forwardRef<HTMLDivElement, content>(function Toolbar(
             style={{ marginLeft: -5, marginRight: 5 }}
           />
 
+          {(!_props?.toolbar || _props?.toolbar?.lineSpacing) && (
+            <LineSpacingButton
+              style={_props?.toolbarClass?.item?.lineSpacing}
+              lineSpacing={contentStyles?.rowMargin}
+            />
+          )}
+          {(!_props?.toolbar || _props?.toolbar?.paragraphSpacing) && (
+            <ParagraphSpacingButton
+              style={_props?.toolbarClass?.item?.paragraphSpacing}
+              marginTop={contentStyles?.marginTop}
+              marginBottom={contentStyles?.marginBottom}
+            />
+          )}
+          <Divider
+            flexItem
+            orientation='vertical'
+            sx={{ mx: 0.5, my: 1 }}
+            style={{ marginLeft: -5, marginRight: 5 }}
+          />
           {(!_props?.toolbar || _props?.toolbar?.hyperlink) && (
             <ButtonWrapper
               sx={_props?.toolbarClass?.item?.hyperlink}
